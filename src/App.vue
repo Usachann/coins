@@ -19,31 +19,19 @@
                 placeholder="Например DOGE"
               />
             </div>
-            <div
-              class="flex bg-white shadow-md p-1 rounded-md shadow-md flex-wrap"
-            >
-              <span
-                class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer"
-              >
-                BTC
-              </span>
-              <span
-                class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer"
-              >
-                DOGE
-              </span>
-              <span
-                class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer"
-              >
-                BCH
-              </span>
-              <span
-                class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer"
-              >
-                CHD
-              </span>
+            <div class="grid grid-cols-4 gap-2 bg-white shadow-md rounded-md">
+              <div v-for="(coin, idx) in displayedCoins()" :key="idx">
+                <span
+                  @click="addCoin(coin)"
+                  class="inline-flex items-center px-2 m-1 p-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer"
+                >
+                  {{ coin }}
+                </span>
+              </div>
             </div>
-            <div class="text-sm text-red-600">Такой тикер уже добавлен</div>
+            <div v-if="isError" class="text-sm text-red-600">
+              Такой тикер уже добавлен
+            </div>
           </div>
         </div>
         <button
@@ -166,11 +154,51 @@ export default {
       tickers: [],
       sel: null,
       graph: [],
+
+      coins: [],
+      isError: false,
     };
   },
 
+  created() {
+    fetch("https://min-api.cryptocompare.com/data/all/coinlist?summary=true")
+      .then((res) => res.json())
+      .then((data) => {
+        const coinsArray = Object.entries(data.Data);
+        const limitedCoins = coinsArray.slice(0, 100);
+        limitedCoins.forEach((elem) => {
+          this.coins.push(elem[0]);
+        });
+      })
+      .catch((error) => {
+        this.coins = [];
+        console.log(error);
+      });
+  },
+  watch: {
+    ticker(newTicker) {
+      this.isError = this.tickers.some((t) => t.name === newTicker);
+    },
+  },
   methods: {
+    addCoin(coin) {
+      this.ticker = coin;
+    },
+    displayedCoins() {
+      if (this.ticker) {
+        const regex = new RegExp(this.ticker, "gi");
+        return this.coins
+          .filter((coin) => {
+            return coin.match(regex);
+          })
+          .slice(0, 4);
+      }
+    },
     add() {
+      if (this.isError) {
+        return;
+      }
+
       let currentTicker = {
         name: this.ticker,
         price: "-",
@@ -215,5 +243,3 @@ export default {
   },
 };
 </script>
-
-<style src="./app.css"></style>
